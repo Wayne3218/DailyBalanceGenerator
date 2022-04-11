@@ -20,6 +20,5 @@ public class Main {
         service.run();
         String output = service.display(generateReport);
         System.out.println(output);
-        System.out.println("Done");
     }
 }

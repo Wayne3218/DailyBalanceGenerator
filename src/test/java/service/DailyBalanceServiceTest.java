@@ -13,17 +13,21 @@ class DailyBalanceServiceTest {
     private String expectedBalanceDisplay = "2013-12-19    19953.31\n" +
             "2013-12-20    -2179.85\n" +
             "2013-12-21    -17.98\n" +
-            "2013-12-22    -110.71";
+            "2013-12-22    -110.71\n" +
+            "End of Balances";
 
     private String expectedGenerateReportOn = "Errors: []\n" +
             "Flag Transactions: []\n" +
             "2013-12-19    19953.31\n" +
             "2013-12-20    -2179.85\n" +
             "2013-12-21    -17.98\n" +
-            "2013-12-22    -110.71";
+            "2013-12-22    -110.71\n" +
+            "End of Balances";
 
     private String expectedServiceWithErrorReportFlagOn = "Errors: [DailyBalanceServiceError{errorType='Fetch Data Error', errorMessage='Random url that won't work/1.json'}]\n" +
-            "Flag Transactions: []\n";
+            "Flag Transactions: []\n" +
+            "\n" +
+            "End of Balances";
 
     @BeforeAll
     void setup() {

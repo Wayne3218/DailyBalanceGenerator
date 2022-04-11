@@ -9,6 +9,12 @@ import static service.Constants.SUCCESS;
 
 public class RestApiService {
 
+    /**
+     *  Fetch api data from provided url
+     * @param urlString String representation of the url to be fetch
+     * @return String representation of the fetched data
+     * @throws FetchDataException
+     */
     public static String get(String urlString) throws FetchDataException {
         StringBuilder responseData = new StringBuilder();
 

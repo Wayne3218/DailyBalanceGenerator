@@ -1,6 +1,5 @@
 package service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import model.FlagTransaction;
 import model.Transaction;
 import model.TransactionPage;
@@ -32,6 +31,9 @@ public class DailyBalanceService {
         this.numPages = numPages;
     }
 
+    /**
+     * run this service
+     */
     public void run() {
         int currentPage = 1;
         if (this.numPages == -1) {
@@ -39,11 +41,15 @@ public class DailyBalanceService {
             currentPage++;
         }
 
-        for (currentPage = currentPage; currentPage <= this.numPages; currentPage++) {
+        for (; currentPage <= this.numPages; currentPage++) {
             runProcess(String.valueOf(currentPage));
         }
     }
 
+    /**
+     * run the process of fetch data, map data and update balance map for one page of transactions
+     * @param currentPage String representation of current page to process
+     */
     private void runProcess(String currentPage) {
         String fetchUrl = this.baseURL + SLASH + currentPage + JSON_FORMAT;
         try {
@@ -65,6 +71,10 @@ public class DailyBalanceService {
         }
     }
 
+    /**
+     * update service's balances map with list of transactions collected
+     * @param transactions List of Transactions to add into balances
+     */
     private void updateBalanceMap(List<Transaction> transactions) {
         for (Transaction entry : transactions) {
             checkDuplicatedTransaction(entry);
@@ -78,6 +88,10 @@ public class DailyBalanceService {
         }
     }
 
+    /**
+     * check for duplicated transactions
+     * @param transaction Transaction object to check against
+     */
     private void checkDuplicatedTransaction(Transaction transaction) {
         int hashCode = transaction.hashCode();
         if (this.duplicationDetectionMap.get(transaction.getDate()) == null) {
@@ -91,10 +105,18 @@ public class DailyBalanceService {
         }
     }
 
+    /**
+     * update total number of transaction pages with calculation
+     * @param totalCount String representation of total count field from API data
+     */
     private void updateNumPages(String totalCount) {
         this.numPages = Integer.parseInt(totalCount) / MAX_ENTRY_PER_PAGE + 1;
     }
 
+    /**
+     * construct daily running balances collected
+     * @return String representation of all daily balances
+     */
     private String displayDailyBalances() {
         StringBuilder stringBuilder = new StringBuilder();
         String newLine = NEW_LINE;
@@ -112,6 +134,11 @@ public class DailyBalanceService {
         return stringBuilder.toString();
     }
 
+    /**
+     * construct daily running balances collected, with the option to display report
+     * @param generateReport Boolean to print report or not
+     * @return String representation of balances, with the option of the report
+     */
     public String display(boolean generateReport) {
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -127,7 +154,7 @@ public class DailyBalanceService {
         }
 
         stringBuilder.append(displayDailyBalances());
-
+        stringBuilder.append(NEW_LINE + END_OF_BALANCES);
         return stringBuilder.toString();
     }
 }
