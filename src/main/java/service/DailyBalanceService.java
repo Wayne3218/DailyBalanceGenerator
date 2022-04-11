@@ -1,23 +1,26 @@
 package service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import model.FlagTransaction;
 import model.Transaction;
 import model.TransactionPage;
-
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 
+import static service.Constants.*;
+
 public class DailyBalanceService {
-    public static final String SPACE = " ";
-    public static final String JSON_FORMAT = ".json";
-    public static final String SLASH = "/";
     private String baseURL;
     private int numPages;
     private final static int MAX_ENTRY_PER_PAGE = 10;
-    private TreeMap<String, BigDecimal> dateBalanceMap;
+    private TreeMap<String, BigDecimal> dateBalanceMap = new TreeMap<>();
+    private HashMap<String, HashSet<Integer>> duplicationDetectionMap = new HashMap<>();
+    private List<FlagTransaction> flagTransactions = new ArrayList<>();
+    private List<DailyBalanceServiceError> errors = new ArrayList<>();
+
 
     public DailyBalanceService() {
-        this("https://resttest.bench.co/transactions");
+        this("https://resttest.bench.co/transactions"); // Default URL when no URL gets passed
     }
 
     public DailyBalanceService(String baseURL) {
@@ -27,21 +30,18 @@ public class DailyBalanceService {
     public DailyBalanceService(String baseURL, int numPages) {
         this.baseURL = baseURL;
         this.numPages = numPages;
-        this.dateBalanceMap = new TreeMap<>();
     }
 
     public void run() {
-        System.out.println("running, numPages=" + this.numPages);
         int currentPage = 1;
         if (this.numPages == -1) {
             runProcess(String.valueOf(currentPage));
+            currentPage++;
         }
 
-        for (currentPage = 2; currentPage <= this.numPages; currentPage++) {
+        for (currentPage = currentPage; currentPage <= this.numPages; currentPage++) {
             runProcess(String.valueOf(currentPage));
         }
-
-        displayResult();
     }
 
     private void runProcess(String currentPage) {
@@ -58,13 +58,17 @@ public class DailyBalanceService {
 
                 updateBalanceMap(transactionPage.getTransactions());
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (FetchDataException e) {
+            this.errors.add(new DailyBalanceServiceError("Fetch Data Error", e.getUrlUsed()));
+        } catch (MapDataToObjectException e) {
+            this.errors.add(new DailyBalanceServiceError("Map Data Error", ""));
         }
     }
 
     private void updateBalanceMap(List<Transaction> transactions) {
         for (Transaction entry : transactions) {
+            checkDuplicatedTransaction(entry);
+
             BigDecimal currentBalance = new BigDecimal(0);
             if (dateBalanceMap.containsKey(entry.getDate())) {
                 currentBalance = dateBalanceMap.get(entry.getDate());
@@ -74,14 +78,56 @@ public class DailyBalanceService {
         }
     }
 
-    private void updateNumPages(String totalCount) {
-        this.numPages = Integer.valueOf(totalCount) / MAX_ENTRY_PER_PAGE + 1;
+    private void checkDuplicatedTransaction(Transaction transaction) {
+        int hashCode = transaction.hashCode();
+        if (this.duplicationDetectionMap.get(transaction.getDate()) == null) {
+            this.duplicationDetectionMap.put(transaction.getDate(), new HashSet<>());
+            this.duplicationDetectionMap.get(transaction.getDate()).add(hashCode);
+        } else if (this.duplicationDetectionMap.get(transaction.getDate()).contains(hashCode)) {
+            FlagTransaction flagTransaction = new FlagTransaction(transaction, "Duplication");
+            this.flagTransactions.add(flagTransaction);
+        } else {
+            this.duplicationDetectionMap.get(transaction.getDate()).add(hashCode);
+        }
     }
 
+    private void updateNumPages(String totalCount) {
+        this.numPages = Integer.parseInt(totalCount) / MAX_ENTRY_PER_PAGE + 1;
+    }
 
-    private void displayResult() {
+    private String displayDailyBalances() {
+        StringBuilder stringBuilder = new StringBuilder();
+        String newLine = NEW_LINE;
+        int lineNumber = 1;
+        int numOfEntries = this.dateBalanceMap.size();
+
         for (Map.Entry<String, BigDecimal> entry : this.dateBalanceMap.entrySet()) {
-            System.out.println(entry.getKey() + SPACE + entry.getValue());
+            if (lineNumber == numOfEntries) {
+                newLine = "";
+            }
+            stringBuilder.append(entry.getKey() + TAB + entry.getValue() + newLine);
+            lineNumber++;
         }
+
+        return stringBuilder.toString();
+    }
+
+    public String display(boolean generateReport) {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        if (generateReport) {
+            stringBuilder.append("Errors:" + SPACE);
+            stringBuilder.append(this.errors);
+            stringBuilder.append(NEW_LINE);
+            stringBuilder.append("Flag Transactions:" + SPACE);
+            stringBuilder.append(this.flagTransactions);
+            stringBuilder.append(NEW_LINE);
+        } else if (this.errors.isEmpty() == false) {
+            return SERVICE_NOT_AVAILABLE;
+        }
+
+        stringBuilder.append(displayDailyBalances());
+
+        return stringBuilder.toString();
     }
 }

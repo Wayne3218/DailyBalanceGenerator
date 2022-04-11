@@ -1,20 +1,17 @@
 package service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import model.TransactionPage;
 
 public class DataService {
-    public static TransactionPage mapJsonStringToTransactionPage(String stringData) {
+    public static TransactionPage mapJsonStringToTransactionPage(String stringData) throws MapDataToObjectException {
         ObjectMapper objectMapper = new ObjectMapper();
-        TransactionPage transactionPage = null;
+        TransactionPage transactionPage;
+
         try {
             transactionPage = objectMapper.readValue(stringData, TransactionPage.class);
-        } catch (JsonMappingException e) {
-            e.printStackTrace();
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new MapDataToObjectException();
         }
 
         return transactionPage;

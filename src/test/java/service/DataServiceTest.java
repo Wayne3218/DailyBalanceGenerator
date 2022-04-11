@@ -3,10 +3,10 @@ package service;
 import model.Transaction;
 import model.TransactionPage;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,7 +17,7 @@ class DataServiceTest {
 
     private TransactionPage expected;
 
-    private String actualJsonDataSuccess = "{\n" +
+    private final String actualJsonDataSuccess = "{\n" +
             "    \"totalCount\": 1,\n" +
             "    \"page\": 1,\n" +
             "    \"transactions\": [{\n" +
@@ -28,7 +28,7 @@ class DataServiceTest {
             "    }]\n" +
             "}";
 
-    private String getActualJsonDataFailure = "{\n" +
+    private final String getActualJsonDataFailure = "{\n" +
             "    \"totalCount\": 1,\n" +
             "    \"page\": 1,\n" +
             "    \"transactions\": [{\n" +
@@ -39,7 +39,7 @@ class DataServiceTest {
             "    }]\n" +
             "}";
 
-    private String extraFieldJsonData = "{\n" +
+    private final String extraFieldJsonData = "{\n" +
             "    \"totalCount\": 1,\n" +
             "    \"page\": 1,\n" +
             "    \"transactions\": [{\n" +
@@ -62,25 +62,30 @@ class DataServiceTest {
         expectedTransaction.setCompany("SHAW CABLESYSTEMS CALGARY AB");
         expectedTransaction.setDate("2013-12-22");
         expectedTransaction.setLedger("Phone & Internet Expense");
-        List<Transaction> transactionList = Arrays.asList(new Transaction[]{expectedTransaction});
+        List<Transaction> transactionList = Arrays.asList(expectedTransaction);
         expected.setTransactions(transactionList);
     }
 
-    @org.junit.jupiter.api.Test
-    void mapJsonStringToTransactionPageSuccess() {
+    @Test
+    void mapJsonStringToTransactionPageSuccess() throws MapDataToObjectException {
         TransactionPage actual = DataService.mapJsonStringToTransactionPage(this.actualJsonDataSuccess);
-        assertEquals(this.expected.toString(), actual.toString());
+        assertEquals(this.expected, actual);
     }
 
-    @org.junit.jupiter.api.Test
-    void mapJsonStringToTransactionPageFailure() {
+    @Test
+    void mapJsonStringToTransactionPageFailure() throws MapDataToObjectException {
         TransactionPage actual = DataService.mapJsonStringToTransactionPage(this.getActualJsonDataFailure);
-        assertNotEquals(this.expected.toString(), actual.toString());
+        assertNotEquals(this.expected, actual);
     }
 
-    @org.junit.jupiter.api.Test
-    void mapJsonStringToTransactionPageExtraFields() {
+    @Test
+    void mapJsonStringToTransactionPageExtraFields() throws MapDataToObjectException {
         TransactionPage actual = DataService.mapJsonStringToTransactionPage(this.extraFieldJsonData);
-        assertEquals(this.expected.toString(), actual.toString());
+        assertEquals(this.expected, actual);
+    }
+
+    @Test
+    void mapJsonStringToTransactionPageException() {
+        assertThrows(MapDataToObjectException.class, () -> DataService.mapJsonStringToTransactionPage("randomString"));
     }
 }
