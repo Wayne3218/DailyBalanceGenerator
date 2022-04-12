@@ -1,9 +1,8 @@
 # DailyBalanceGenerator
-
-
 ## Install and run the app
 - Required : Maven, JDK 8
-- To build the app, run `mvn clean install -U` in app root directory or to build with tests skipped `mvn clean install -U -DskipTests` 
+- To build the app, run `mvn clean install -U` in app root directory 
+  - or to build with tests skipped : `mvn clean install -U -DskipTests` 
 - Navigate into ./target folder : `cd target`
 - To run the app as customer : `java -jar DailyBalanceGenerator-1.jar`
 - To run the app with report : `java -jar DailyBalanceGenerator-1.jar report`
