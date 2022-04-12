@@ -6,16 +6,17 @@ import model.TransactionPage;
 import java.math.BigDecimal;
 import java.util.*;
 
+
 import static service.Constants.*;
 
 public class DailyBalanceService {
-    private String baseURL;
+    private final String baseURL;
     private int numPages;
     private final static int MAX_ENTRY_PER_PAGE = 10;
-    private TreeMap<String, BigDecimal> dateBalanceMap = new TreeMap<>();
-    private HashMap<String, HashSet<Integer>> duplicationDetectionMap = new HashMap<>();
-    private List<FlagTransaction> flagTransactions = new ArrayList<>();
-    private List<DailyBalanceServiceError> errors = new ArrayList<>();
+    private final TreeMap<String, BigDecimal> dateBalanceMap = new TreeMap<>();
+    private final HashMap<String, HashSet<Integer>> duplicationDetectionMap = new HashMap<>();
+    private final List<FlagTransaction> flagTransactions = new ArrayList<>();
+    private final List<DailyBalanceServiceError> errors = new ArrayList<>();
 
 
     public DailyBalanceService() {
@@ -37,12 +38,14 @@ public class DailyBalanceService {
     public void run() {
         int currentPage = 1;
         if (this.numPages == -1) {
-            runProcess(String.valueOf(currentPage));
+            TransactionPage transactionPage = fetchDataToObject(String.valueOf(currentPage));
+            updateBalanceMap(transactionPage);
             currentPage++;
         }
 
         for (; currentPage <= this.numPages; currentPage++) {
-            runProcess(String.valueOf(currentPage));
+            TransactionPage transactionPage = fetchDataToObject(String.valueOf(currentPage));
+            updateBalanceMap(transactionPage);
         }
     }
 
@@ -50,41 +53,44 @@ public class DailyBalanceService {
      * run the process of fetch data, map data and update balance map for one page of transactions
      * @param currentPage String representation of current page to process
      */
-    private void runProcess(String currentPage) {
+    private TransactionPage fetchDataToObject(String currentPage) {
         String fetchUrl = this.baseURL + SLASH + currentPage + JSON_FORMAT;
+        TransactionPage transactionPage = null;
         try {
             String data = RestApiService.get(fetchUrl);
 
             if (data.isEmpty() == false) {
-                TransactionPage transactionPage = DataService.mapJsonStringToTransactionPage(data);
+                transactionPage = DataService.mapJsonStringToTransactionPage(data);
 
                 if (this.numPages == -1) {
                     updateNumPages(transactionPage.getTotalCount());
                 }
-
-                updateBalanceMap(transactionPage.getTransactions());
             }
         } catch (FetchDataException e) {
             this.errors.add(new DailyBalanceServiceError("Fetch Data Error", e.getUrlUsed()));
         } catch (MapDataToObjectException e) {
             this.errors.add(new DailyBalanceServiceError("Map Data Error", ""));
         }
+
+        return transactionPage;
     }
 
     /**
      * update service's balances map with list of transactions collected
-     * @param transactions List of Transactions to add into balances
+     * @param transactionPage TransactionPage object
      */
-    private void updateBalanceMap(List<Transaction> transactions) {
-        for (Transaction entry : transactions) {
-            checkDuplicatedTransaction(entry);
+    private void updateBalanceMap(TransactionPage transactionPage) {
+        if (transactionPage != null) {
+            for (Transaction entry : transactionPage.getTransactions()) {
+                checkDuplicatedTransaction(entry);
 
-            BigDecimal currentBalance = new BigDecimal(0);
-            if (dateBalanceMap.containsKey(entry.getDate())) {
-                currentBalance = dateBalanceMap.get(entry.getDate());
+                BigDecimal currentBalance = new BigDecimal(0);
+                if (dateBalanceMap.containsKey(entry.getDate())) {
+                    currentBalance = dateBalanceMap.get(entry.getDate());
+                }
+                currentBalance = currentBalance.add(entry.getAmount());
+                dateBalanceMap.put(entry.getDate(), currentBalance);
             }
-            currentBalance = currentBalance.add(entry.getAmount());
-            dateBalanceMap.put(entry.getDate(), currentBalance);
         }
     }
 
@@ -114,10 +120,10 @@ public class DailyBalanceService {
     }
 
     /**
-     * construct daily running balances collected
+     * generate the text of daily running balances collected
      * @return String representation of all daily balances
      */
-    private String displayDailyBalances() {
+    private String generateDailyBalanceText() {
         StringBuilder stringBuilder = new StringBuilder();
         String newLine = NEW_LINE;
         int lineNumber = 1;
@@ -127,9 +133,25 @@ public class DailyBalanceService {
             if (lineNumber == numOfEntries) {
                 newLine = "";
             }
-            stringBuilder.append(entry.getKey() + TAB + entry.getValue() + newLine);
+            stringBuilder.append(entry.getKey()).append(TAB).append(entry.getValue()).append(newLine);
             lineNumber++;
         }
+
+        return stringBuilder.toString();
+    }
+
+    /**
+     * generate report text
+     * @return a String representation of the report
+     */
+    private String generateReportText() {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Errors:" + SPACE);
+        stringBuilder.append(this.errors);
+        stringBuilder.append(NEW_LINE);
+        stringBuilder.append("Flag Transactions:" + SPACE);
+        stringBuilder.append(this.flagTransactions);
+        stringBuilder.append(NEW_LINE);
 
         return stringBuilder.toString();
     }
@@ -143,17 +165,12 @@ public class DailyBalanceService {
         StringBuilder stringBuilder = new StringBuilder();
 
         if (generateReport) {
-            stringBuilder.append("Errors:" + SPACE);
-            stringBuilder.append(this.errors);
-            stringBuilder.append(NEW_LINE);
-            stringBuilder.append("Flag Transactions:" + SPACE);
-            stringBuilder.append(this.flagTransactions);
-            stringBuilder.append(NEW_LINE);
+            stringBuilder.append(generateReportText());
         } else if (this.errors.isEmpty() == false) {
             return SERVICE_NOT_AVAILABLE;
         }
 
-        stringBuilder.append(displayDailyBalances());
+        stringBuilder.append(generateDailyBalanceText());
         stringBuilder.append(NEW_LINE + END_OF_BALANCES);
         return stringBuilder.toString();
     }
