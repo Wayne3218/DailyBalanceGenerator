@@ -35,6 +35,8 @@ This is a Java app that generates the daily running balance for customers
 
 
 ## Things to be improved on
+- Configuration
+  - Moving configuration into a dedicated configuration file and use a configuration manager 
 - Error/Exception handling 
   - Adding more details to custom exceptions to provide more insight into issues
 - Json to Object mapping method 
