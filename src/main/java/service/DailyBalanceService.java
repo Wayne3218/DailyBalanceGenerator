@@ -6,13 +6,19 @@ import model.TransactionPage;
 import java.math.BigDecimal;
 import java.util.*;
 
-
-import static service.Constants.*;
-
 public class DailyBalanceService {
+
+    // Constants
+    private static final int MAX_ENTRY_PER_PAGE = 10;
+    private static final String SPACE = " ";
+    private static final String TAB = "    ";
+    private static final String JSON_FORMAT = ".json";
+    private static final String SLASH = "/";
+    private static final String NEW_LINE = "\n";
+    private static final String SERVICE_NOT_AVAILABLE_TEXT = "Service Temporarily Unavailable";
+
     private final String baseURL;
     private int numPages;
-    private final static int MAX_ENTRY_PER_PAGE = 10;
     private final TreeMap<String, BigDecimal> dateBalanceMap = new TreeMap<>();
     private final HashMap<String, HashSet<Integer>> duplicationDetectionMap = new HashMap<>();
     private final List<FlagTransaction> flagTransactions = new ArrayList<>();
@@ -125,15 +131,14 @@ public class DailyBalanceService {
      */
     private String generateDailyBalanceText() {
         StringBuilder stringBuilder = new StringBuilder();
-        String newLine = NEW_LINE;
         int lineNumber = 1;
         int numOfEntries = this.dateBalanceMap.size();
 
         for (Map.Entry<String, BigDecimal> entry : this.dateBalanceMap.entrySet()) {
-            if (lineNumber == numOfEntries) {
-                newLine = "";
+            stringBuilder.append(entry.getKey()).append(TAB).append(entry.getValue());
+            if (lineNumber < numOfEntries) {
+                stringBuilder.append(NEW_LINE);
             }
-            stringBuilder.append(entry.getKey()).append(TAB).append(entry.getValue()).append(newLine);
             lineNumber++;
         }
 
@@ -145,15 +150,14 @@ public class DailyBalanceService {
      * @return a String representation of the report
      */
     private String generateReportText() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Errors:" + SPACE);
-        stringBuilder.append(this.errors);
-        stringBuilder.append(NEW_LINE);
-        stringBuilder.append("Flag Transactions:" + SPACE);
-        stringBuilder.append(this.flagTransactions);
-        stringBuilder.append(NEW_LINE);
+        String reportString = "Errors:" + SPACE +
+                this.errors +
+                NEW_LINE +
+                "Flag Transactions:" + SPACE +
+                this.flagTransactions +
+                NEW_LINE;
 
-        return stringBuilder.toString();
+        return reportString;
     }
 
     /**
@@ -167,11 +171,10 @@ public class DailyBalanceService {
         if (generateReport) {
             stringBuilder.append(generateReportText());
         } else if (this.errors.isEmpty() == false) {
-            return SERVICE_NOT_AVAILABLE;
+            return SERVICE_NOT_AVAILABLE_TEXT;
         }
 
         stringBuilder.append(generateDailyBalanceText());
-        stringBuilder.append(NEW_LINE + END_OF_BALANCES);
         return stringBuilder.toString();
     }
 }
